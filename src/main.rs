@@ -1,13 +1,18 @@
 use iced::executor;
 use iced::widget::{button, column, container, horizontal_space, row, text, text_editor};
-use iced::{Application, Command, Element, Length, Renderer, Settings, Theme};
+use iced::{Application, Command, Element, Font, Length, Renderer, Settings, Theme};
 
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 fn main() -> iced::Result {
-    Editor::run(Settings::default())
+    Editor::run(Settings {
+        fonts: vec![include_bytes!("../fonts/editors-icons.ttf")
+            .as_slice()
+            .into()],
+        ..Settings::default()
+    })
 }
 
 struct Editor {
@@ -92,10 +97,11 @@ impl Application for Editor {
 
     fn view(&self) -> Element<'_, Message, Renderer> {
         let controls = row![
-            button("Open").on_press(Message::Open),
-            button("New").on_press(Message::New),
-            button("Save").on_press(Message::Save)
-        ];
+            button(open_icon()).on_press(Message::Open),
+            button(new_icon()).on_press(Message::New),
+            button(save_icon()).on_press(Message::Save)
+        ]
+        .spacing(10);
         let input = text_editor(&self.content).on_edit(Message::Edit);
 
         let status_bar = {
@@ -125,6 +131,24 @@ impl Application for Editor {
     fn theme(&self) -> Theme {
         Theme::Dark
     }
+}
+
+fn new_icon<'a>() -> Element<'a, Message> {
+    icon('\u{E800}')
+}
+
+fn open_icon<'a>() -> Element<'a, Message> {
+    icon('\u{F115}')
+}
+
+fn save_icon<'a>() -> Element<'a, Message> {
+    icon('\u{E801}')
+}
+
+fn icon<'a>(codepoint: char) -> Element<'a, Message> {
+    const ICON_FONT: Font = Font::with_name("editors-icons");
+
+    text(codepoint).font(ICON_FONT).into()
 }
 
 fn default_file() -> PathBuf {
