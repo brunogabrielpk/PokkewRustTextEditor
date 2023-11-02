@@ -1,5 +1,7 @@
 use iced::executor;
-use iced::widget::{button, column, container, horizontal_space, row, text, text_editor};
+use iced::highlighter::{self, Highlighter};
+use iced::theme;
+use iced::widget::{button, column, container, horizontal_space, row, text, text_editor, tooltip};
 use iced::{Application, Command, Element, Font, Length, Renderer, Settings, Theme};
 
 use std::io;
@@ -8,6 +10,7 @@ use std::sync::Arc;
 
 fn main() -> iced::Result {
     Editor::run(Settings {
+        default_font: Font::MONOSPACE,
         fonts: vec![include_bytes!("../fonts/editors-icons.ttf")
             .as_slice()
             .into()],
@@ -97,12 +100,25 @@ impl Application for Editor {
 
     fn view(&self) -> Element<'_, Message, Renderer> {
         let controls = row![
-            button(open_icon()).on_press(Message::Open),
-            button(new_icon()).on_press(Message::New),
-            button(save_icon()).on_press(Message::Save)
+            action(open_icon(), "Open file", Message::Open),
+            action(new_icon(), "New file", Message::New),
+            action(save_icon(), "Save file", Message::Save)
         ]
         .spacing(10);
-        let input = text_editor(&self.content).on_edit(Message::Edit);
+        let input = text_editor(&self.content)
+            .on_edit(Message::Edit)
+            .highlight::<Highlighter>(
+                highlighter::Settings {
+                    theme: highlighter::Theme::SolarizedDark,
+                    extension: self
+                        .path
+                        .as_ref()
+                        .and_then(|path| path.extension()?.to_str())
+                        .unwrap_or("rs")
+                        .to_string(),
+                },
+                |highlight, _theme| highlight.to_format(),
+            );
 
         let status_bar = {
             let status = if let Some(Error::IOFailed(error)) = self.error.as_ref() {
@@ -133,6 +149,21 @@ impl Application for Editor {
     }
 }
 
+fn action<'a>(
+    content: Element<'a, Message>,
+    label: &str,
+    on_press: Message,
+) -> Element<'a, Message> {
+    tooltip(
+        button(container(content).width(30).center_x())
+            .on_press(on_press)
+            .padding([5, 10]),
+        label,
+        tooltip::Position::FollowCursor,
+    )
+    .style(theme::Container::Box)
+    .into()
+}
 fn new_icon<'a>() -> Element<'a, Message> {
     icon('\u{E800}')
 }
